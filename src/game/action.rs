@@ -15,3 +15,12 @@ impl std::fmt::Display for Action {
         write!(f, "{},{}", self.thrust, self.angle)
     }
 }
+
+impl From<&str> for Action {
+    fn from(s: &str) -> Self {
+        let mut parts = s.split(',');
+        let thrust = parts.next().unwrap_or("0").parse::<u8>().unwrap_or(0);
+        let angle = parts.next().unwrap_or("0").parse::<i16>().unwrap_or(0);
+        Action::new(thrust, angle)
+    }
+}

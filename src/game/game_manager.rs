@@ -132,7 +132,7 @@ impl GameManager {
             let n_minus1_point = Point::new(n_minus1.x, n_minus1.y);
 
             let dist = n_minus2.distance(&n_minus1_point);
-            let factor = 50_000.0 / dist;
+            let factor = 5_000.0 / dist;
 
             // Calcul du dernier point
             // last_pt = n_minus1 * (factor+1) - n_minus2 * factor
@@ -160,7 +160,7 @@ mod tests {
 
         assert_eq!(pod.x, 10353);
         assert_eq!(pod.y, 1986);
-        assert_eq!(pod.angle.round() as i32, 161);
+        assert_eq!(pod.angle.round(), 161.0);
         assert_eq!(pod.vx, 0.0);
         assert_eq!(pod.vy, 0.0);
         assert_eq!(pod.next_checkpoint_id, 0);
@@ -182,7 +182,7 @@ mod tests {
             CheckPoint::new(3358, 2838),
             CheckPoint::new(10353, 1986),
             // CheckPoint::new(59986, -4059),
-            CheckPoint::new(59986, -4060), // TODO: Check this value, projection issue
+            CheckPoint::new(15316, 1382), // TODO: Check this value, projection issue
         ];
 
         assert_eq!(checkpoints, expected);
@@ -255,7 +255,7 @@ mod tests {
             // Assert initial values
             assert_eq!(_pod.x, 10353);
             assert_eq!(_pod.y, 1986);
-            assert_eq!(_pod.angle.round() as i32, 161);
+            assert_eq!(_pod.angle.round(), 161.0);
         }
 
         // Apply the action
@@ -280,5 +280,32 @@ mod tests {
         assert_eq!(pod_x, pod2.x);
         assert_eq!(pod_y, pod2.y);
         assert!(!std::ptr::eq(&game, &game2));
+    }
+
+    #[test]
+    fn test_simulation_1() {
+        let mut game = GameManager::new(600);
+        let (pod, _checkpoints) = game.set_testcase("testcases/test13.json");
+
+        assert_eq!(pod.x, 13332);
+        assert_eq!(pod.y, 4114);
+        assert_eq!(pod.angle.round(), 154.0);
+        assert_eq!(pod.vx, 0.0);
+        assert_eq!(pod.vy, 0.0);
+        assert_eq!(pod.next_checkpoint_id, 0);
+
+        let command = "200,-14;200,-1;200,14;200,7;200,-12;176,0;200,18;116,18;100,18;0,18;0,18;15,18;146,18;200,18;200,18;195,18;200,9;200,6;200,15;200,15;200,11;200,11;161,-3;191,18;98,18;18,18;0,18;20,18;87,11;200,18;197,18;200,18;200,18;200,14;151,-7;166,9;200,-8;200,10;197,-1;200,7;200,-7;200,-18;200,-18;123,-18;7,-18;0,-18;0,-18;44,-18;58,-18;158,-18;176,-18;200,-18;200,-18;200,-17;200,-15;200,-2;200,0;200,9;198,-9;184,17;184,8;173,18;157,18;120,12;0,18;178,18;131,16;200,15;200,18;200,15;200,11;200,-9;200,9;200,4;194,10;200,14;171,16;200,15;16,18;53,18;0,18;200,18;200,15;200,18;194,18;200,12;200,14;176,8;143,15;188,18;192,-18;200,1;157,-18;11,-18;13,-18;0,-18;0,-18;3,-18;200,-18;200,-18;200,-16;200,-18;200,-3;200,-11;200,-18;200,6;200,10;200,2;200,-4;191,0;200,-18;200,-18;195,-18;37,-16;27,-18;0,-18;22,-18;5,-18;103,-18;200,-18;197,-9;200,-8;200,-6;200,-18;200,2;200,-5;200,6;194,11;200,18;200,8;200,18;149,9;91,18;64,14;114,13;160,18;200,18;200,18;200,11;190,-13;200,18;200,11;200,3;187,-4;200,18;198,18;92,18;90,18;12,18;174,18;199,18;200,18;200,14;200,18;200,14;200,3;200,18;199,1;200,15;200,5;193,15;92,18;0,18;10,18;0,18;43,18;200,18;200,18;200,18;200,11;200,0;198,0;200,18;200,-6;200,11;200,-11;200,-9;185,-10;198,-8;176,-12;37,-18;9,-18;0,-18;0,-18;48,-18;145,-18;200,-18;200,-18;200,-18;200,-18;200,-18;200,-18;200,18;149,-17;199,7;71,-10;179,5;169,18;157,18;139,10;185,16;187,16;176,15;0,18;200,18;200,18;200,0;200,-8";
+
+        let actions: Vec<Action> = command.split(';').map(Action::from).collect();
+
+        for (i, action) in actions.iter().take(2).enumerate() {
+            let (_, done, t) = game.apply_action(action);
+            if done {
+                assert!(i as f64 + t == 207.57);
+                return;
+            }
+        }
+
+        assert!(false, "Game should have ended before the last action");
     }
 }
