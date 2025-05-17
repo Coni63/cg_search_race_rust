@@ -2,17 +2,26 @@ use crate::game::point::Point;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CheckPoint {
-    pub x: i32,
-    pub y: i32,
+    pub x: f64,
+    pub y: f64,
     pub r: f64,
     pub r2: f64,
 }
 
 impl CheckPoint {
-    pub fn new(x: i32, y: i32) -> Self {
+    pub fn from_i32(x: i32, y: i32) -> Self {
         CheckPoint {
-            x,
-            y,
+            x: x as f64,
+            y: y as f64,
+            r: 600.0,
+            r2: 360000.0,
+        }
+    }
+
+    pub fn from_f64(x: f64, y: f64) -> Self {
+        CheckPoint {
+            x: x.trunc(),
+            y: y.trunc(),
             r: 600.0,
             r2: 360000.0,
         }
@@ -26,7 +35,9 @@ impl CheckPoint {
     }
 
     pub fn distance_sq(&self, other: &Point) -> f64 {
-        ((self.x - other.x).pow(2) + (self.y - other.y).pow(2)) as f64
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+        dx * dx + dy * dy
     }
 
     pub fn closest(&self, a: &Point, b: &Point) -> Point {
@@ -59,29 +70,29 @@ mod checkpoint_tests {
 
     #[test]
     fn test_checkpoint_creation() {
-        let cp = CheckPoint::new(100, 200);
-        assert_eq!(cp.x, 100);
-        assert_eq!(cp.y, 200);
+        let cp = CheckPoint::from_i32(100, 200);
+        assert_eq!(cp.x, 100.0);
+        assert_eq!(cp.y, 200.0);
         assert_eq!(cp.r, 600.0);
         assert_eq!(cp.r2, 360000.0);
     }
 
     #[test]
     fn test_checkpoint_distance() {
-        let cp = CheckPoint::new(0, 0);
-        let p = Point::new(3, 4);
+        let cp = CheckPoint::from_i32(0, 0);
+        let p = Point::from_i32(3, 4);
         assert_eq!(cp.distance(&p), 5.0);
     }
 
     #[test]
     fn test_checkpoint_closest() {
-        let cp = CheckPoint::new(3, 2);
-        let a = Point::new(0, 0);
-        let b = Point::new(6, 0);
+        let cp = CheckPoint::from_i32(3, 2);
+        let a = Point::from_i32(0, 0);
+        let b = Point::from_i32(6, 0);
 
         // The closest point from cp to line a-b should be at (3, 0)
         let closest = cp.closest(&a, &b);
-        assert_eq!(closest.x, 3);
-        assert_eq!(closest.y, 0);
+        assert_eq!(closest.x, 3.0);
+        assert_eq!(closest.y, 0.0);
     }
 }

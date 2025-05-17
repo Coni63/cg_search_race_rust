@@ -85,14 +85,14 @@ impl GameManager {
     }
 
     pub fn reset(&mut self) {
-        self.pod = Some(Pod::new(0, 0, 0.0, 0.0, 0.0, 0));
+        self.pod = Some(Pod::new(0.0, 0.0, 0.0, 0.0, 0.0, 0));
         self._parse_checkpoint();
 
         let start = &self.checkpoints[self.checkpoints.len() - 2];
         self.pod = Some(Pod::new(start.x, start.y, 0.0, 0.0, 0.0, 0));
 
         if let Some(pod) = &mut self.pod {
-            let checkpoint_point = Point::new(self.checkpoints[0].x, self.checkpoints[0].y);
+            let checkpoint_point = Point::from_f64(self.checkpoints[0].x, self.checkpoints[0].y);
             let angle = pod.get_angle(&checkpoint_point);
             pod.angle = angle.round();
         }
@@ -108,7 +108,7 @@ impl GameManager {
             for s in data.test_in.split(';') {
                 let coords: Vec<i32> = s.split(' ').filter_map(|x| x.parse::<i32>().ok()).collect();
                 if coords.len() >= 2 {
-                    all_pts.push(CheckPoint::new(coords[0], coords[1]));
+                    all_pts.push(CheckPoint::from_i32(coords[0], coords[1]));
                 }
             }
 
@@ -128,22 +128,23 @@ impl GameManager {
             let n_minus1 = &self.checkpoints[self.checkpoints.len() - 1];
 
             // Conversion en Point pour utiliser les opérations
-            let n_minus2_point = Point::new(n_minus2.x, n_minus2.y);
-            let n_minus1_point = Point::new(n_minus1.x, n_minus1.y);
+            let n_minus2_point = Point::from_f64(n_minus2.x, n_minus2.y);
+            let n_minus1_point = Point::from_f64(n_minus1.x, n_minus1.y);
 
             let dist = n_minus2.distance(&n_minus1_point);
-            let factor = 5_000.0 / dist;
+            let factor = 50_000.0 / dist;
 
             // Calcul du dernier point
             // last_pt = n_minus1 * (factor+1) - n_minus2 * factor
             let n_minus1_scaled = n_minus1_point * (factor + 1.0);
             let n_minus2_scaled = n_minus2_point * factor;
-            let last_pt = Point::new(
+            let last_pt = Point::from_f64(
                 n_minus1_scaled.x - n_minus2_scaled.x,
                 n_minus1_scaled.y - n_minus2_scaled.y,
             );
 
-            self.checkpoints.push(CheckPoint::new(last_pt.x, last_pt.y));
+            self.checkpoints
+                .push(CheckPoint::from_f64(last_pt.x, last_pt.y));
         }
     }
 }
@@ -158,8 +159,8 @@ mod tests {
         let mut game = GameManager::new(600);
         let (pod, _checkpoints) = game.set_testcase("testcases/test1.json");
 
-        assert_eq!(pod.x, 10353);
-        assert_eq!(pod.y, 1986);
+        assert_eq!(pod.x, 10353.0);
+        assert_eq!(pod.y, 1986.0);
         assert_eq!(pod.angle.round(), 161.0);
         assert_eq!(pod.vx, 0.0);
         assert_eq!(pod.vy, 0.0);
@@ -172,17 +173,16 @@ mod tests {
         let (_pod, checkpoints) = game.set_testcase("testcases/test1.json");
 
         let expected = vec![
-            CheckPoint::new(2757, 4659),
-            CheckPoint::new(3358, 2838),
-            CheckPoint::new(10353, 1986),
-            CheckPoint::new(2757, 4659),
-            CheckPoint::new(3358, 2838),
-            CheckPoint::new(10353, 1986),
-            CheckPoint::new(2757, 4659),
-            CheckPoint::new(3358, 2838),
-            CheckPoint::new(10353, 1986),
-            // CheckPoint::new(59986, -4059),
-            CheckPoint::new(15316, 1382), // TODO: Check this value, projection issue
+            CheckPoint::from_i32(2757, 4659),
+            CheckPoint::from_i32(3358, 2838),
+            CheckPoint::from_i32(10353, 1986),
+            CheckPoint::from_i32(2757, 4659),
+            CheckPoint::from_i32(3358, 2838),
+            CheckPoint::from_i32(10353, 1986),
+            CheckPoint::from_i32(2757, 4659),
+            CheckPoint::from_i32(3358, 2838),
+            CheckPoint::from_i32(10353, 1986),
+            CheckPoint::from_i32(59986, -4059),
         ];
 
         assert_eq!(checkpoints, expected);
@@ -193,11 +193,11 @@ mod tests {
         let mut game = GameManager::new(600);
 
         game.checkpoints = vec![
-            CheckPoint::new(800, 0),
-            CheckPoint::new(2200, 0),
-            CheckPoint::new(3600, 0),
+            CheckPoint::from_i32(800, 0),
+            CheckPoint::from_i32(2200, 0),
+            CheckPoint::from_i32(3600, 0),
         ];
-        game.pod = Some(Pod::new(0, 0, 0.0, 0.0, 0.0, 0));
+        game.pod = Some(Pod::new(0.0, 0.0, 0.0, 0.0, 0.0, 0));
 
         assert_eq!(game.turn, 0);
 
@@ -221,11 +221,11 @@ mod tests {
         let mut game = GameManager::new(600);
 
         game.checkpoints = vec![
-            CheckPoint::new(800, 0),
-            CheckPoint::new(2200, 0),
-            CheckPoint::new(3600, 0),
+            CheckPoint::from_i32(800, 0),
+            CheckPoint::from_i32(2200, 0),
+            CheckPoint::from_i32(3600, 0),
         ];
-        game.pod = Some(Pod::new(0, 0, 0.0, 0.0, 0.0, 0));
+        game.pod = Some(Pod::new(0.0, 0.0, 0.0, 0.0, 0.0, 0));
 
         assert_eq!(game.turn, 0);
 
@@ -253,8 +253,8 @@ mod tests {
             let (_pod, _) = game.set_testcase("testcases/test1.json");
 
             // Assert initial values
-            assert_eq!(_pod.x, 10353);
-            assert_eq!(_pod.y, 1986);
+            assert_eq!(_pod.x, 10353.0);
+            assert_eq!(_pod.y, 1986.0);
             assert_eq!(_pod.angle.round(), 161.0);
         }
 
@@ -263,8 +263,8 @@ mod tests {
 
         let pod1 = game.pod.as_ref().unwrap();
         // Assert values after action
-        assert_eq!(pod1.x, 10163);
-        assert_eq!(pod1.y, 2051);
+        assert_eq!(pod1.x, 10163.0);
+        assert_eq!(pod1.y, 2051.0);
 
         // First, get a snapshot of the data we'll need for later comparison
         let pod_x = game.pod.as_ref().unwrap().x;
@@ -287,8 +287,8 @@ mod tests {
         let mut game = GameManager::new(600);
         let (pod, _checkpoints) = game.set_testcase("testcases/test13.json");
 
-        assert_eq!(pod.x, 13332);
-        assert_eq!(pod.y, 4114);
+        assert_eq!(pod.x, 13332.0);
+        assert_eq!(pod.y, 4114.0);
         assert_eq!(pod.angle.round(), 154.0);
         assert_eq!(pod.vx, 0.0);
         assert_eq!(pod.vy, 0.0);
@@ -298,10 +298,12 @@ mod tests {
 
         let actions: Vec<Action> = command.split(';').map(Action::from).collect();
 
-        for (i, action) in actions.iter().take(2).enumerate() {
+        for (i, action) in actions.iter().enumerate() {
             let (_, done, t) = game.apply_action(action);
+            eprintln!("Action {}: {:?} {}", i, action, t);
             if done {
-                assert!(i as f64 + t == 207.57);
+                let error_score = i as f64 + t - 207.57;
+                assert!(error_score.abs() < 0.1, "Error score: {}", error_score);
                 return;
             }
         }

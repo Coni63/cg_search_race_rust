@@ -6,8 +6,8 @@ use crate::game::point::Point;
 
 #[derive(Debug, Clone)]
 pub struct Pod {
-    pub x: i32,
-    pub y: i32,
+    pub x: f64,
+    pub y: f64,
     pub vx: f64,
     pub vy: f64,
     pub angle: f64,
@@ -16,7 +16,7 @@ pub struct Pod {
 }
 
 impl Pod {
-    pub fn new(x: i32, y: i32, vx: f64, vy: f64, angle: f64, next_checkpoint_id: usize) -> Self {
+    pub fn new(x: f64, y: f64, vx: f64, vy: f64, angle: f64, next_checkpoint_id: usize) -> Self {
         Pod {
             x,
             y,
@@ -65,7 +65,7 @@ impl Pod {
         data
     }
 
-    pub fn output(&self, action: &Action) -> (i32, i32, u8) {
+    pub fn output(&self, action: &Action) -> (f64, f64, i32) {
         let mut next_angle: f64 = self.angle + action.angle as f64;
 
         if next_angle >= 360.0 {
@@ -80,7 +80,7 @@ impl Pod {
         let px = self.x as f64 + next_angle.cos() * 100000.0;
         let py = self.y as f64 + next_angle.sin() * 100000.0;
 
-        (px as i32, py as i32, action.thrust)
+        (px, py, action.thrust)
     }
 
     pub fn describe(&self) {
@@ -165,11 +165,8 @@ impl Pod {
 
     fn _has_collision(&self, chkpt_pos: &CheckPoint) -> f64 {
         // Approach used : https://www.youtube.com/watch?v=23kTf-36Fcw
-        let curr_pos = Point::new(self.x, self.y);
-        let next_pos = Point::new(
-            (self.x as f64 + self.vx) as i32,
-            (self.y as f64 + self.vy) as i32,
-        );
+        let curr_pos = Point::from_f64(self.x, self.y);
+        let next_pos = Point::from_f64((self.x + self.vx), (self.y + self.vy));
 
         // si on est a l'arret, pas besoin de verifier
         if curr_pos == next_pos {
@@ -189,7 +186,7 @@ impl Pod {
 
         // produit scalaire du centre du checkpoint avec la vitesse
         // s'il est negatif c'est que le pt est en arriere de la trajectoire
-        let d = Point::new(p.x - curr_pos.x, p.y - curr_pos.y);
+        let d = Point::from_f64(p.x - curr_pos.x, p.y - curr_pos.y);
         let s = d.x as f64 * self.vx + d.y as f64 * self.vy;
         if s < 0.0 {
             return -1.0;
@@ -211,12 +208,13 @@ impl Pod {
     }
 
     fn _move(&mut self) {
-        self.x = (self.x as f64 + self.vx) as i32;
-        self.y = (self.y as f64 + self.vy) as i32;
+        self.x = self.x + self.vx;
+        self.y = self.y + self.vy;
     }
 
     fn _end(&mut self) {
-        // position is already truncated
+        self.x = self.x.trunc();
+        self.y = self.y.trunc();
         self.vx = (self.vx * 0.85).trunc();
         self.vy = (self.vy * 0.85).trunc();
         self.angle = self.angle.round();
@@ -230,7 +228,9 @@ impl Pod {
     }
 
     pub fn distance_sq(&self, other: &Point) -> f64 {
-        ((self.x - other.x).pow(2) + (self.y - other.y).pow(2)) as f64
+        let dx = self.x as f64 - other.x;
+        let dy = self.y as f64 - other.y;
+        dx * dx + dy * dy
     }
 }
 
@@ -239,11 +239,18 @@ mod tests {
     use super::*;
 
     fn checkpoint(x: i32, y: i32) -> CheckPoint {
-        CheckPoint::new(x, y)
+        CheckPoint::from_i32(x, y)
     }
 
     fn pod(x: i32, y: i32, r: i32, vx: i32, vy: i32, angle: i32, next_id: usize) -> Pod {
-        Pod::new(x, y, vx as f64, vy as f64, angle as f64, next_id)
+        Pod::new(
+            x as f64,
+            y as f64,
+            vx as f64,
+            vy as f64,
+            angle as f64,
+            next_id,
+        )
     }
 
     #[test]
@@ -432,7 +439,7 @@ mod tests {
             },
             &checkpoints,
         );
-        assert_eq!(pod.x, 700);
+        assert_eq!(pod.x, 700.0);
         assert_eq!(pod.next_checkpoint_id, 1);
     }
 
@@ -448,7 +455,7 @@ mod tests {
             },
             &checkpoints,
         );
-        assert_eq!(pod.x, 700);
+        assert_eq!(pod.x, 700.0);
         assert_eq!(pod.next_checkpoint_id, 1);
     }
 
@@ -464,7 +471,7 @@ mod tests {
             },
             &checkpoints,
         );
-        assert_eq!(pod.x, 700);
+        assert_eq!(pod.x, 700.0);
         assert_eq!(pod.next_checkpoint_id, 1);
     }
 
@@ -480,7 +487,7 @@ mod tests {
             },
             &checkpoints,
         );
-        assert_eq!(pod.x, 700);
+        assert_eq!(pod.x, 700.0);
         assert_eq!(pod.next_checkpoint_id, 1);
     }
 
@@ -496,7 +503,7 @@ mod tests {
             },
             &checkpoints,
         );
-        assert_eq!(pod.x, 477);
+        assert_eq!(pod.x, 477.0);
         assert_eq!(pod.next_checkpoint_id, 1);
     }
 
@@ -512,7 +519,7 @@ mod tests {
             },
             &checkpoints,
         );
-        assert_eq!(pod.x, 1450);
+        assert_eq!(pod.x, 1450.0);
         assert_eq!(pod.next_checkpoint_id, 1);
     }
 
@@ -528,7 +535,7 @@ mod tests {
             },
             &checkpoints,
         );
-        assert_eq!(pod.x, 150);
+        assert_eq!(pod.x, 150.0);
         assert_eq!(pod.next_checkpoint_id, 1);
     }
 }
