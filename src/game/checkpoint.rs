@@ -20,8 +20,8 @@ impl CheckPoint {
 
     pub fn from_f64(x: f64, y: f64) -> Self {
         CheckPoint {
-            x: x.trunc(),
-            y: y.trunc(),
+            x,
+            y,
             r: 600.0,
             r2: 360000.0,
         }
@@ -50,7 +50,7 @@ impl CheckPoint {
     }
 
     pub fn norm_sq(&self) -> f64 {
-        (self.x * self.x + self.y * self.y) as f64
+        self.x * self.x + self.y * self.y
     }
 
     pub fn norm(&self) -> f64 {

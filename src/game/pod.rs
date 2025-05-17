@@ -4,7 +4,7 @@ use crate::game::action::Action;
 use crate::game::checkpoint::CheckPoint;
 use crate::game::point::Point;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Pod {
     pub x: f64,
     pub y: f64,
@@ -59,7 +59,7 @@ impl Pod {
     pub fn apply_move(&mut self, action: &Action, checkpoints: &[CheckPoint]) -> f64 {
         self._rotate(action.angle as f64);
         self._boost(action.thrust as f64);
-        let (cross, data) = self._check_cross_checkpoint(checkpoints);
+        let (_crossed, data) = self._check_cross_checkpoint(checkpoints);
         self._move();
         self._end();
         data
@@ -77,15 +77,14 @@ impl Pod {
         // On cherche un point pour correspondre à l'angle qu'on veut
         // On multiplie par 10000.0 pour éviter les arrondis
         let next_angle = next_angle * PI / 180.0;
-        let px = self.x as f64 + next_angle.cos() * 100000.0;
-        let py = self.y as f64 + next_angle.sin() * 100000.0;
+        let px = self.x + next_angle.cos() * 100000.0;
+        let py = self.y + next_angle.sin() * 100000.0;
 
         (px, py, action.thrust)
     }
 
     pub fn describe(&self) {
-        eprintln!("");
-        eprintln!("Pod Position       : ({}, {})", self.x, self.y);
+        eprintln!("/nPod Position       : ({}, {})", self.x, self.y);
         eprintln!("Pod Speed          : ({}, {})", self.vx, self.vy);
         eprintln!("Pod Angle          : {}", self.angle);
         eprintln!("Pod NextCheckPoint : {}", self.next_checkpoint_id);
@@ -94,8 +93,8 @@ impl Pod {
     pub fn get_angle(&self, p: &Point) -> f64 {
         // Returns the angle between the pod and point p relative to the X axis
         let d = self.distance(p);
-        let dx = (p.x - self.x) as f64 / d;
-        let dy = (p.y - self.y) as f64 / d;
+        let dx = (p.x - self.x) / d;
+        let dy = (p.y - self.y) / d;
 
         let a = dx.acos().to_degrees();
 
@@ -130,7 +129,7 @@ impl Pod {
         // rotate the pod by angle degrees (positive = clockwise)
 
         // We can't turn more than 18 degrees in one turn
-        self.angle += angle.max(-18.0).min(18.0);
+        self.angle += angle.clamp(-18.0, 18.0);
 
         // The % operator is slow. If we can avoid it, it's better.
         if self.angle >= 360.0 {
@@ -149,7 +148,7 @@ impl Pod {
         self.vy += ra.sin() * thrust;
     }
 
-    fn _check_cross_checkpoint(&mut self, checkpoints: &[CheckPoint]) -> (i32, f64) {
+    fn _check_cross_checkpoint(&mut self, checkpoints: &[CheckPoint]) -> (bool, f64) {
         let chkpt_pos = &checkpoints[self.next_checkpoint_id];
         let t = self._has_collision(chkpt_pos);
         if t != -1.0 {
@@ -157,16 +156,16 @@ impl Pod {
             if self.next_checkpoint_id >= checkpoints.len() {
                 self.next_checkpoint_id = 0;
             }
-            return (1, t);
+            return (true, t);
         }
 
-        (0, -1.0)
+        (false, -1.0)
     }
 
     fn _has_collision(&self, chkpt_pos: &CheckPoint) -> f64 {
         // Approach used : https://www.youtube.com/watch?v=23kTf-36Fcw
         let curr_pos = Point::from_f64(self.x, self.y);
-        let next_pos = Point::from_f64((self.x + self.vx), (self.y + self.vy));
+        let next_pos = Point::from_f64(self.x + self.vx, self.y + self.vy);
 
         // si on est a l'arret, pas besoin de verifier
         if curr_pos == next_pos {
@@ -187,7 +186,7 @@ impl Pod {
         // produit scalaire du centre du checkpoint avec la vitesse
         // s'il est negatif c'est que le pt est en arriere de la trajectoire
         let d = Point::from_f64(p.x - curr_pos.x, p.y - curr_pos.y);
-        let s = d.x as f64 * self.vx + d.y as f64 * self.vy;
+        let s = d.x * self.vx + d.y * self.vy;
         if s < 0.0 {
             return -1.0;
         }
@@ -200,7 +199,7 @@ impl Pod {
         let f = (chkpt_pos.r2 - b_sq).sqrt();
         let t = (a_sq.sqrt() - f) / (self.vx * self.vx + self.vy * self.vy).sqrt();
 
-        if t < 0.0 || t > 1.0 {
+        if !(0.0..=1.0).contains(&t) {
             return -1.0;
         }
 
@@ -208,8 +207,8 @@ impl Pod {
     }
 
     fn _move(&mut self) {
-        self.x = self.x + self.vx;
-        self.y = self.y + self.vy;
+        self.x += self.vx;
+        self.y += self.vy;
     }
 
     fn _end(&mut self) {
@@ -228,8 +227,8 @@ impl Pod {
     }
 
     pub fn distance_sq(&self, other: &Point) -> f64 {
-        let dx = self.x as f64 - other.x;
-        let dy = self.y as f64 - other.y;
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
         dx * dx + dy * dy
     }
 }
@@ -242,7 +241,7 @@ mod tests {
         CheckPoint::from_i32(x, y)
     }
 
-    fn pod(x: i32, y: i32, r: i32, vx: i32, vy: i32, angle: i32, next_id: usize) -> Pod {
+    fn pod(x: i32, y: i32, vx: i32, vy: i32, angle: i32, next_id: usize) -> Pod {
         Pod::new(
             x as f64,
             y as f64,
@@ -255,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_apply_moves() {
-        let mut pod = pod(0, 0, 0, 0, 0, 0, 0);
+        let mut pod = pod(0, 0, 0, 0, 0, 0);
         let checkpoints = vec![checkpoint(0, 1000)];
         let moves = vec![
             Action {
@@ -276,7 +275,7 @@ mod tests {
 
     #[test]
     fn test_vmax_right() {
-        let mut pod = pod(0, 0, 0, 0, 0, 0, 0);
+        let mut pod = pod(0, 0, 0, 0, 0, 0);
         let checkpoints = vec![checkpoint(0, 1000)];
         let speeds = vec![
             170, 314, 436, 540, 629, 704, 768, 822, 868, 907, 940, 969, 993, 1014, 1031, 1046, 1059,
@@ -295,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_vmax_left() {
-        let mut pod = pod(0, 0, 0, 0, 0, 0, 0);
+        let mut pod = pod(0, 0, 0, 0, 0, 0);
         let checkpoints = vec![checkpoint(0, 1000)];
         let mv = Action {
             thrust: 200,
@@ -311,7 +310,7 @@ mod tests {
 
     #[test]
     fn test_friction() {
-        let mut pod = pod(0, 0, 0, 150, 0, 0, 0);
+        let mut pod = pod(0, 0, 150, 0, 0, 0);
         let checkpoints = vec![checkpoint(0, 1000)];
         let mv = Action {
             thrust: 0,
@@ -325,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_rotation() {
-        let mut pod = pod(0, 0, 0, 0, 0, 0, 0);
+        let mut pod = pod(0, 0, 0, 0, 0, 0);
         let checkpoints = vec![checkpoint(0, 10000)];
 
         assert_eq!(pod.angle, 0.0);
@@ -378,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_rotation_2() {
-        let mut pod = pod(0, 0, 0, 5, 5, 45, 0);
+        let mut pod = pod(0, 0, 5, 5, 45, 0);
         let checkpoints = vec![checkpoint(0, 10000)];
 
         pod.apply_move(
@@ -429,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_cross_checkpoint_1() {
-        let mut pod = pod(0, 0, 0, 500, 0, 0, 0);
+        let mut pod = pod(0, 0, 500, 0, 0, 0);
         let checkpoints = vec![checkpoint(350, 600), checkpoint(0, 100000)];
 
         pod.apply_move(
@@ -445,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_cross_checkpoint_2() {
-        let mut pod = pod(0, 0, 0, 500, 0, 0, 0);
+        let mut pod = pod(0, 0, 500, 0, 0, 0);
         let checkpoints = vec![checkpoint(350, 599), checkpoint(0, 100000)];
 
         pod.apply_move(
@@ -461,7 +460,7 @@ mod tests {
 
     #[test]
     fn test_cross_checkpoint_3() {
-        let mut pod = pod(0, 0, 0, 500, 0, 0, 1);
+        let mut pod = pod(0, 0, 500, 0, 0, 1);
         let checkpoints = vec![checkpoint(0, 599), checkpoint(0, 10000)];
 
         pod.apply_move(
@@ -477,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_cross_checkpoint_4() {
-        let mut pod = pod(0, 0, 0, 500, 0, 0, 0);
+        let mut pod = pod(0, 0, 500, 0, 0, 0);
         let checkpoints = vec![checkpoint(700, 599), checkpoint(0, 10000)];
 
         pod.apply_move(
@@ -493,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_cross_checkpoint_5() {
-        let mut pod = pod(150, 0, 0, 127, 0, 0, 0);
+        let mut pod = pod(150, 0, 127, 0, 0, 0);
         let checkpoints = vec![checkpoint(800, 0), checkpoint(0, 10000)];
 
         pod.apply_move(
@@ -509,7 +508,7 @@ mod tests {
 
     #[test]
     fn test_cross_checkpoint_6() {
-        let mut pod = pod(150, 0, 0, 1100, 0, 0, 0);
+        let mut pod = pod(150, 0, 1100, 0, 0, 0);
         let checkpoints = vec![checkpoint(800, 50), checkpoint(0, 10000)];
 
         pod.apply_move(
@@ -525,7 +524,7 @@ mod tests {
 
     #[test]
     fn test_cross_checkpoint_7() {
-        let mut pod = pod(1450, 0, 0, -1100, 0, 180, 0);
+        let mut pod = pod(1450, 0, -1100, 0, 180, 0);
         let checkpoints = vec![checkpoint(800, 50), checkpoint(0, 10000)];
 
         pod.apply_move(

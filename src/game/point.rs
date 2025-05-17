@@ -89,8 +89,8 @@ impl std::ops::Mul<f64> for Point {
 
     fn mul(self, scalar: f64) -> Self {
         Point {
-            x: self.x as f64 * scalar,
-            y: self.y as f64 * scalar,
+            x: self.x * scalar,
+            y: self.y * scalar,
         }
     }
 }
@@ -109,12 +109,11 @@ mod tests {
 
     mod test_point {
         use super::*;
-        use std::f64::EPSILON;
 
         // Helper function to compare floating point values with a small epsilon
         fn assert_float_eq(a: f64, b: f64) {
             assert!(
-                (a - b).abs() < EPSILON,
+                (a - b).abs() < f64::EPSILON,
                 "Expected {} to be equal to {}",
                 a,
                 b
