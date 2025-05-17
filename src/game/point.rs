@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
@@ -62,32 +62,30 @@ impl Point {
     }
 }
 
-impl std::ops::Add for Point {
-    type Output = Self;
+impl std::ops::Add for &Point {
+    type Output = Point;
 
-    fn add(self, other: Self) -> Self {
+    fn add(self, rhs: &Point) -> Point {
         Point {
-            x: self.x + other.x,
-            y: self.y + other.y,
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
         }
     }
 }
 
-impl std::ops::Sub for Point {
-    type Output = Self;
-
-    fn sub(self, other: Self) -> Self {
+impl std::ops::Sub for &Point {
+    type Output = Point;
+    fn sub(self, rhs: &Point) -> Point {
         Point {
-            x: self.x - other.x,
-            y: self.y - other.y,
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
         }
     }
 }
 
-impl std::ops::Mul<f64> for Point {
-    type Output = Self;
-
-    fn mul(self, scalar: f64) -> Self {
+impl std::ops::Mul<f64> for &Point {
+    type Output = Point;
+    fn mul(self, scalar: f64) -> Point {
         Point {
             x: self.x * scalar,
             y: self.y * scalar,
@@ -192,11 +190,11 @@ mod tests {
             let p2 = Point::from_i32(5, -5);
             let p3 = Point::from_i32(10, 0);
 
-            assert_eq!(p1 + p2, p3);
+            assert_eq!(&p1 + &p2, p3);
 
             let p1 = Point::from_i32(5, 5);
             let p2 = Point::from_i32(0, 0);
-            assert_eq!(p1 + p2, p1);
+            assert_eq!(&p1 + &p2, p1);
         }
 
         #[test]
@@ -205,12 +203,12 @@ mod tests {
             let p2 = Point::from_i32(5, -5);
             let p3 = Point::from_i32(0, 10);
 
-            assert_eq!(p1 - p2, p3);
+            assert_eq!(&p1 - &p2, p3);
 
             let p1 = Point::from_i32(5, 5);
             let p2 = Point::from_i32(0, 0);
-            assert_eq!(p1 - p2, p1);
-            assert_eq!(p1 - p1, p2);
+            assert_eq!(&p1 - &p2, p1);
+            assert_eq!(&p1 - &p1, p2);
         }
 
         #[test]
@@ -219,10 +217,10 @@ mod tests {
             let p1 = Point::from_i32(5, -2);
             let p2 = Point::from_i32(0, 0);
 
-            assert_eq!(p1 * 0.0, p2);
+            assert_eq!(&p1 * 0.0, p2);
 
             // In Rust we need separate implementations for different scalar types
-            let result = p1 * 1.5;
+            let result = &p1 * 1.5;
 
             // We need to account for potential rounding differences in floating point
             assert!(result.x == 7.5);
@@ -251,7 +249,7 @@ mod tests {
 
             let p1 = Point::from_i32(15, 20);
             let p2 = Point::from_i32(12, 16);
-            assert_float_eq((p1 - p2).norm_sq(), 25.0);
+            assert_float_eq((&p1 - &p2).norm_sq(), 25.0);
         }
     }
 }

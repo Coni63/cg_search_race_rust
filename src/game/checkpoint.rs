@@ -1,6 +1,6 @@
 use crate::game::point::Point;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct CheckPoint {
     pub x: f64,
     pub y: f64,
@@ -24,6 +24,15 @@ impl CheckPoint {
             y,
             r: 600.0,
             r2: 360000.0,
+        }
+    }
+
+    pub fn clone_checkpoint(&self) -> Self {
+        CheckPoint {
+            x: self.x,
+            y: self.y,
+            r: self.r,
+            r2: self.r2,
         }
     }
 }

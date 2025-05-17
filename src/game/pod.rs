@@ -256,13 +256,7 @@ mod tests {
     fn test_apply_moves() {
         let mut pod = pod(0, 0, 0, 0, 0, 0);
         let checkpoints = vec![checkpoint(0, 1000)];
-        let moves = vec![
-            Action {
-                thrust: 200,
-                angle: 0
-            };
-            10
-        ];
+        let moves: Vec<Action> = (0..10).map(|_| Action::new(200, 0)).collect();
 
         assert_eq!(pod.vx, 0.0);
         assert_eq!(pod.vy, 0.0);

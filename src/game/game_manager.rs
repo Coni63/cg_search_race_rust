@@ -9,7 +9,7 @@ use crate::game::checkpoint::CheckPoint;
 use crate::game::pod::Pod;
 use crate::game::point::Point;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize)]
 struct TestData {
     #[serde(rename = "testIn")]
     test_in: String,
@@ -28,7 +28,11 @@ pub struct GameManager {
 impl GameManager {
     pub fn clone_manager(&self) -> GameManager {
         GameManager {
-            checkpoints: self.checkpoints.clone(),
+            checkpoints: self
+                .checkpoints
+                .iter()
+                .map(|c| c.clone_checkpoint())
+                .collect(),
             pod: self.pod.clone_pod(),
             done: self.done,
             turn: self.turn,
@@ -103,17 +107,12 @@ impl<P: AsRef<Path>> From<P> for GameManager {
                 }
             }
 
-            // Rotated checkpoints (equivalent to all_pts[1:] + all_pts[:1] in Python)
-            let mut rotated_chkpt = Vec::new();
-            if !all_pts.is_empty() {
-                rotated_chkpt.extend_from_slice(&all_pts[1..]);
-                rotated_chkpt.push(all_pts[0]);
+            for _ in 0..3 {
+                for checkpoint in all_pts[1..].iter() {
+                    checkpoints.push(checkpoint.clone_checkpoint());
+                }
+                checkpoints.push(all_pts[0].clone_checkpoint());
             }
-
-            // Multiplier par 3 (equivalent to rotated_chkpt * 3 in Python)
-            checkpoints = rotated_chkpt.clone();
-            checkpoints.extend(rotated_chkpt.clone());
-            checkpoints.extend(rotated_chkpt);
 
             let n_minus2 = &checkpoints[checkpoints.len() - 2];
             let n_minus1 = &checkpoints[checkpoints.len() - 1];
@@ -127,8 +126,8 @@ impl<P: AsRef<Path>> From<P> for GameManager {
 
             // Calcul du dernier point
             // last_pt = n_minus1 * (factor+1) - n_minus2 * factor
-            let n_minus1_scaled = n_minus1_point * (factor + 1.0);
-            let n_minus2_scaled = n_minus2_point * factor;
+            let n_minus1_scaled = &n_minus1_point * (factor + 1.0);
+            let n_minus2_scaled = &n_minus2_point * factor;
             let last_pt = Point::from_f64(
                 (n_minus1_scaled.x - n_minus2_scaled.x).trunc(),
                 (n_minus1_scaled.y - n_minus2_scaled.y).trunc(),
@@ -218,7 +217,7 @@ mod tests {
         assert_eq!(game.turn, 1);
         assert!(!done);
 
-        let actions = vec![Action::new(1, 0); 598];
+        let actions: Vec<Action> = (0..598).map(|_| Action::new(1, 0)).collect();
         let (_pod, done, _turn) = game.apply_actions(&actions);
         assert_eq!(game.turn, 599);
         assert!(!done);

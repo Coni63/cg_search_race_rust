@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Action {
     pub thrust: i32,
     pub angle: i32,
