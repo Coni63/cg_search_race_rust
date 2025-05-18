@@ -15,6 +15,7 @@ pub struct Pod {
     pub done: bool,
     pub turn: usize,
     pub max_turn: usize,
+    pub last_score: f64,
 }
 
 impl Pod {
@@ -29,6 +30,7 @@ impl Pod {
             done: false,
             turn: 0,
             max_turn: 600,
+            last_score: 0.0,
         }
     }
 
@@ -47,32 +49,26 @@ impl Pod {
             done: self.done,
             turn: self.turn,
             max_turn: self.max_turn,
+            last_score: self.last_score,
         }
     }
 
-    pub fn apply_moves(&mut self, actions: &[Action], checkpoints: &[CheckPoint]) -> i32 {
-        let mut cross = 0;
+    pub fn apply_moves(&mut self, actions: &[Action], checkpoints: &[CheckPoint]) {
         for action in actions {
-            let data = self.apply_move(action, checkpoints);
-            if data >= 0.0 {
-                cross += 1;
-            }
+            self.apply_move(action, checkpoints);
         }
-
-        cross
     }
 
-    pub fn apply_move(&mut self, action: &Action, checkpoints: &[CheckPoint]) -> f64 {
+    pub fn apply_move(&mut self, action: &Action, checkpoints: &[CheckPoint]) {
         self._rotate(action.angle as f64);
         self._boost(action.thrust as f64);
-        let (_crossed, data) = self._check_cross_checkpoint(checkpoints);
+        self._check_cross_checkpoint(checkpoints);
         self._move();
         self._end();
         self.turn += 1;
         if self.turn >= self.max_turn {
             self.done = true;
         }
-        data
     }
 
     pub fn output(&self, action: &Action) -> (f64, f64, i32) {
@@ -135,7 +131,7 @@ impl Pod {
         }
     }
 
-    pub fn score(&self, checkpoints: &[CheckPoint]) -> f64 {
+    pub fn fitness(&self, checkpoints: &[CheckPoint]) -> f64 {
         let next_checkpoint = &checkpoints[self.next_checkpoint_id];
         let checkpoint_point = Point::from_f64(next_checkpoint.x, next_checkpoint.y);
         let dist_to_next = self.distance(&checkpoint_point);
@@ -147,7 +143,8 @@ impl Pod {
         // rotate the pod by angle degrees (positive = clockwise)
 
         // We can't turn more than 18 degrees in one turn
-        self.angle += angle.clamp(-18.0, 18.0);
+        // self.angle += angle.clamp(-18.0, 18.0);
+        self.angle += angle;
 
         // The % operator is slow. If we can avoid it, it's better.
         if self.angle >= 360.0 {
@@ -166,7 +163,7 @@ impl Pod {
         self.vy += ra.sin() * thrust;
     }
 
-    fn _check_cross_checkpoint(&mut self, checkpoints: &[CheckPoint]) -> (bool, f64) {
+    fn _check_cross_checkpoint(&mut self, checkpoints: &[CheckPoint]) {
         let chkpt_pos = &checkpoints[self.next_checkpoint_id];
         let t = self._has_collision(chkpt_pos);
         if t != -1.0 {
@@ -174,10 +171,8 @@ impl Pod {
             if self.next_checkpoint_id == checkpoints.len() - 1 {
                 self.done = true;
             }
-            return (true, t);
+            self.last_score = self.turn as f64 + t;
         }
-
-        (false, -1.0)
     }
 
     fn _has_collision(&self, chkpt_pos: &CheckPoint) -> f64 {
@@ -310,7 +305,7 @@ mod tests {
         let checkpoints = vec![checkpoint(0, 1000)];
         let mv = Action {
             thrust: 200,
-            angle: 180,
+            angle: 18,
         };
 
         pod.apply_move(&mv, &checkpoints);
@@ -326,7 +321,7 @@ mod tests {
         let checkpoints = vec![checkpoint(0, 1000)];
         let mv = Action {
             thrust: 0,
-            angle: 180,
+            angle: 18,
         };
 
         pod.apply_move(&mv, &checkpoints);
@@ -344,7 +339,7 @@ mod tests {
         pod.apply_move(
             &Action {
                 thrust: 200,
-                angle: 90,
+                angle: 18,
             },
             &checkpoints,
         );
@@ -353,7 +348,7 @@ mod tests {
         pod.apply_move(
             &Action {
                 thrust: 200,
-                angle: 30,
+                angle: 18,
             },
             &checkpoints,
         );
@@ -362,7 +357,7 @@ mod tests {
         pod.apply_move(
             &Action {
                 thrust: 200,
-                angle: -30,
+                angle: -18,
             },
             &checkpoints,
         );
@@ -395,7 +390,7 @@ mod tests {
         pod.apply_move(
             &Action {
                 thrust: 200,
-                angle: -30,
+                angle: -18,
             },
             &checkpoints,
         );
@@ -404,7 +399,7 @@ mod tests {
         pod.apply_move(
             &Action {
                 thrust: 200,
-                angle: -30,
+                angle: -18,
             },
             &checkpoints,
         );
@@ -413,7 +408,7 @@ mod tests {
         pod.apply_move(
             &Action {
                 thrust: 200,
-                angle: -30,
+                angle: -18,
             },
             &checkpoints,
         );

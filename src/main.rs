@@ -3,6 +3,7 @@ mod game;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 
@@ -85,25 +86,40 @@ pub fn get_initial_pod(checkpoints: &[CheckPoint]) -> Pod {
 
 fn main() {
     let checkpoints = load_testcase("testcases/test1.json");
-    let base_pod = get_initial_pod(&checkpoints);
+    let mut base_pod = get_initial_pod(&checkpoints);
 
     let all_possible_actions: Vec<Action> = (0..=200)
         .flat_map(|thrust| (-18..=18).map(move |angle| Action::new(thrust, angle)))
         .collect();
 
-    let mut best_score = 0.0;
-    let mut best_action = Action::new(0, 0);
-    for action in all_possible_actions.iter() {
-        let mut pod = base_pod.clone_pod();
-        pod.apply_move(action, &checkpoints);
-        let score = pod.score(&checkpoints);
+    let start = Instant::now();
+    let mut all_actions: Vec<&Action> = Vec::new();
+    while !base_pod.done {
+        let mut best_score = 0.0;
+        let mut best_action = &all_possible_actions[0];
+        for action in all_possible_actions.iter() {
+            let mut pod = base_pod.clone_pod();
+            pod.apply_move(action, &checkpoints);
+            let score = pod.fitness(&checkpoints);
 
-        if score > best_score {
-            best_score = score;
-            best_action = action.clone();
+            if score > best_score {
+                best_score = score;
+                best_action = action;
+            }
         }
+        base_pod.apply_move(best_action, &checkpoints);
+        all_actions.push(best_action);
     }
-    println!("Best action: {:?}", best_action);
+
+    println!("Final Score: {}", base_pod.last_score);
+    println!("Time elapsed using Instant: {:?}", start.elapsed());
+
+    let end_string = all_actions
+        .iter()
+        .map(|action| action.to_string())
+        .collect::<Vec<String>>()
+        .join(";");
+    println!("{}", end_string);
 
     // println!("Pod: {:?}", pod);
     // println!("Checkpoints: {:?}", checkpoints);
@@ -218,13 +234,11 @@ mod tests {
 
         let actions: Vec<Action> = command.split(';').map(Action::from).collect();
 
-        for (i, action) in actions.iter().enumerate() {
-            let t = pod.apply_move(action, &checkpoints);
-            if pod.done {
-                let error_score = i as f64 + t - 207.57;
-                assert!(error_score.abs() < 0.1, "Error score: {}", error_score);
-                return;
-            }
+        pod.apply_moves(&actions, &checkpoints);
+        if pod.done {
+            let error_score = pod.last_score - 207.57;
+            assert!(error_score.abs() < 0.1, "Error score: {}", error_score);
+            return;
         }
 
         panic!("Game should have ended before the last action");
