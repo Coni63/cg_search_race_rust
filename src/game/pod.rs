@@ -12,7 +12,9 @@ pub struct Pod {
     pub vy: f64,
     pub angle: f64,
     pub next_checkpoint_id: usize,
-    pub r: i32,
+    pub done: bool,
+    pub turn: usize,
+    pub max_turn: usize,
 }
 
 impl Pod {
@@ -24,7 +26,9 @@ impl Pod {
             vy,
             angle,
             next_checkpoint_id,
-            r: 100,
+            done: false,
+            turn: 0,
+            max_turn: 600,
         }
     }
 
@@ -40,7 +44,9 @@ impl Pod {
             vy: self.vy,
             angle: self.angle,
             next_checkpoint_id: self.next_checkpoint_id,
-            r: self.r,
+            done: self.done,
+            turn: self.turn,
+            max_turn: self.max_turn,
         }
     }
 
@@ -62,6 +68,10 @@ impl Pod {
         let (_crossed, data) = self._check_cross_checkpoint(checkpoints);
         self._move();
         self._end();
+        self.turn += 1;
+        if self.turn >= self.max_turn {
+            self.done = true;
+        }
         data
     }
 
@@ -125,6 +135,14 @@ impl Pod {
         }
     }
 
+    pub fn score(&self, checkpoints: &[CheckPoint]) -> f64 {
+        let next_checkpoint = &checkpoints[self.next_checkpoint_id];
+        let checkpoint_point = Point::from_f64(next_checkpoint.x, next_checkpoint.y);
+        let dist_to_next = self.distance(&checkpoint_point);
+
+        50_000.0 * (self.next_checkpoint_id + 1) as f64 - dist_to_next
+    }
+
     fn _rotate(&mut self, angle: f64) {
         // rotate the pod by angle degrees (positive = clockwise)
 
@@ -153,8 +171,8 @@ impl Pod {
         let t = self._has_collision(chkpt_pos);
         if t != -1.0 {
             self.next_checkpoint_id += 1;
-            if self.next_checkpoint_id >= checkpoints.len() {
-                self.next_checkpoint_id = 0;
+            if self.next_checkpoint_id == checkpoints.len() - 1 {
+                self.done = true;
             }
             return (true, t);
         }

@@ -8,6 +8,13 @@ impl Action {
     pub fn new(thrust: i32, angle: i32) -> Self {
         Self { thrust, angle }
     }
+
+    pub fn clone(&self) -> Self {
+        Self {
+            thrust: self.thrust,
+            angle: self.angle,
+        }
+    }
 }
 
 impl std::fmt::Display for Action {
